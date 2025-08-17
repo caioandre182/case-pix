@@ -1,70 +1,49 @@
-CREATE TYPE tipo_pessoa_enum AS ENUM ('PF', 'PJ');
-CREATE TYPE tipo_conta_enum AS ENUM ('CORRENTE', 'POUPANCA');
-CREATE TYPE tipo_chave_enum AS ENUM ('CELULAR', 'CPF', 'CNPJ', 'EMAIL', 'ALEATORIA');
+BEGIN;
 
 CREATE TABLE titular (
-    id UUID PRIMARY KEY,
-    tipo_pessoa tipo_pessoa_enum NOT NULL,
-    documento TEXT,
-    nome TEXT,
-    sobrenome TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id UUID PRIMARY KEY,
+  tipo_pessoa VARCHAR(2) NOT NULL,
+  cpf VARCHAR(11),
+  cnpj VARCHAR(14),
+  nome VARCHAR(30) NOT NULL,
+  sobrenome VARCHAR(45),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT uk_titular_cpf  UNIQUE (cpf),
+  CONSTRAINT uk_titular_cnpj UNIQUE (cnpj)
 );
 
 CREATE TABLE conta_bancaria (
-    id UUID PRIMARY KEY,
-    titular_id UUID NOT NULL REFERENCES titular(id),
-    tipo_conta tipo_conta_enum NOT NULL,
-    numero_agencia TEXT NOT NULL,
-    numero_conta TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT uk_conta_unica_por_titular UNIQUE (titular_id, tipo_conta, numero_agencia, numero_conta)
+  id UUID PRIMARY KEY,
+  titular_id UUID NOT NULL REFERENCES titular (id),
+  tipo_conta VARCHAR(10) NOT NULL,
+  numero_agencia VARCHAR(4) NOT NULL,
+  numero_conta VARCHAR(8) NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT uk_conta_unica_por_titular
+        UNIQUE (titular_id, tipo_conta, numero_agencia, numero_conta)
 );
 
-CREATE INDEX idx_conta_titular ON conta_bancaria(titular_id);
+CREATE INDEX idx_conta_ag_cc_tipo
+  ON conta_bancaria (numero_agencia, numero_conta, tipo_conta);
 
-CREATE TABLE pix_key (
-    id_registro UUID PRIMARY KEY,
-    titular_id UUID NOT NULL REFERENCES titular(id),
-    conta_id UUID NOT NULL REFERENCES conta_bancaria(id),
-    tipo_chave tipo_chave_enum NOT NULL,
-    valor_chave TEXT NOT NULL,
-    nome_correntista TEXT NOT NULL,
-    sobrenome_correntista TEXT NOT NULL,
-    ativa BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
-    CONSTRAINT uk_pix_valor_chave UNIQUE (valor_chave),
-
-    CONSTRAINT ck_pix_valor_por_tipo CHECK (
-        CASE tipo_chave
-            WHEN 'CELULAR'   THEN valor_chave ~ '^\+[1-9][0-9]{1,14}$'
-            WHEN 'CPF'       THEN valor_chave ~ '^[0-9]{11}$'
-            WHEN 'CNPJ'      THEN valor_chave ~ '^[0-9]{14}$'
-            WHEN 'EMAIL'     THEN valor_chave ~ '^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$'
-            WHEN 'ALEATORIA' THEN valor_chave ~ '^[0-9a-fA-F\-]{36}$'
-            ELSE FALSE
-        END
-    )
+CREATE TABLE pix_chave (
+  id UUID PRIMARY KEY,
+  conta_id UUID NOT NULL REFERENCES conta_bancaria (id),
+  tipo_chave VARCHAR(9) NOT NULL,
+  valor_chave VARCHAR(77) NOT NULL,
+  nome_correntista VARCHAR(30) NOT NULL,
+  sobrenome_correntista VARCHAR(45) NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  deleted_at TIMESTAMPTZ NULL,
+  CONSTRAINT uk_pix_valor UNIQUE (valor_chave)
 );
 
-CREATE INDEX idx_pix_titular ON pix_key(titular_id);
-CREATE INDEX idx_pix_conta   ON pix_key(conta_id);
-CREATE INDEX idx_pix_tipo    ON pix_key(tipo_chave);
+CREATE INDEX idx_pix_conta ON pix_chave (conta_id);
+CREATE INDEX idx_pix_tipo ON pix_chave (tipo_chave);
+CREATE INDEX idx_pix_created_at ON pix_chave (created_at);
+CREATE INDEX idx_pix_dt_inativacao ON pix_chave (deleted_at);
+CREATE INDEX idx_pix_nome_correntista ON pix_chave (nome_correntista);
 
-CREATE TABLE app_user (
-    id UUID PRIMARY KEY,
-    nome_usuario TEXT NOT NULL UNIQUE,
-    hash_senha TEXT NOT NULL,
-    perfis TEXT NOT NULL,
-    ativo BOOLEAN NOT NULL DEFAULT TRUE,
-    tentativas_falhas INT NOT NULL DEFAULT 0,
-    bloqueado_ate TIMESTAMPTZ NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-
+COMMIT;
