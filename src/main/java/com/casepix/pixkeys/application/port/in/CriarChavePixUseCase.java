@@ -1,9 +1,9 @@
 package com.casepix.pixkeys.application.port.in;
 
-import com.casepix.pixkeys.adapters.inbound.api.dto.CriarChavePixResponse;
 import com.casepix.pixkeys.application.port.in.command.CriarChavePixCommand;
+import com.casepix.pixkeys.application.port.result.CriarChavePixResult;
 
 
 public interface CriarChavePixUseCase {
-    CriarChavePixResponse executar(CriarChavePixCommand req);
+    CriarChavePixResult executar(CriarChavePixCommand req);
 }

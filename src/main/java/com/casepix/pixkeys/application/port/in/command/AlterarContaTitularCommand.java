@@ -4,7 +4,7 @@ import com.casepix.pixkeys.domain.enums.TipoConta;
 
 import java.util.UUID;
 
-public record AlterarChavePixCommand(
+public record AlterarContaTitularCommand(
     UUID idChave,
     TipoConta tipoConta,
     String numeroAgencia,

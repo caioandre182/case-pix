@@ -6,7 +6,7 @@ CREATE TABLE titular (
   cpf VARCHAR(11),
   cnpj VARCHAR(14),
   nome VARCHAR(30) NOT NULL,
-  sobrenome VARCHAR(45),
+  sobrenome VARCHAR(45) NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT uk_titular_cpf  UNIQUE (cpf),
   CONSTRAINT uk_titular_cnpj UNIQUE (cnpj)
@@ -32,8 +32,6 @@ CREATE TABLE pix_chave (
   conta_id UUID NOT NULL REFERENCES conta_bancaria (id),
   tipo_chave VARCHAR(9) NOT NULL,
   valor_chave VARCHAR(77) NOT NULL,
-  nome_correntista VARCHAR(30) NOT NULL,
-  sobrenome_correntista VARCHAR(45) NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   deleted_at TIMESTAMPTZ NULL,
@@ -44,6 +42,5 @@ CREATE INDEX idx_pix_conta ON pix_chave (conta_id);
 CREATE INDEX idx_pix_tipo ON pix_chave (tipo_chave);
 CREATE INDEX idx_pix_created_at ON pix_chave (created_at);
 CREATE INDEX idx_pix_dt_inativacao ON pix_chave (deleted_at);
-CREATE INDEX idx_pix_nome_correntista ON pix_chave (nome_correntista);
 
 COMMIT;

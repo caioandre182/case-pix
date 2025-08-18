@@ -17,13 +17,12 @@ import java.util.UUID;
         @Index(name = "idx_pix_conta", columnList = "conta_id"),
         @Index(name = "idx_pix_tipo", columnList = "tipo_chave"),
         @Index(name = "idx_pix_created_at", columnList = "created_at"),
-        @Index(name = "idx_pix_dt_inativacao", columnList = "deleted_at"),
-        @Index(name = "idx_pix_nome_correntista", columnList = "nome_correntista")
+        @Index(name = "idx_pix_dt_inativacao", columnList = "deleted_at")
     }
 )
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 @EqualsAndHashCode(of = "id")
-public class PixChaveEntity {
+public class ChavePixEntity {
     @Id
     private UUID id;
 
@@ -38,14 +37,6 @@ public class PixChaveEntity {
     @Size(max = 77)
     @Column(name = "valor_chave", nullable = false, length = 77)
     private String valorChave;
-
-    @Size(max = 30)
-    @Column(name = "nome_correntista", nullable = false, length = 30)
-    private String nomeCorrentista;
-
-    @Size(max = 45)
-    @Column(name = "sobrenome_correntista", length = 45)
-    private String sobrenomeCorrentista;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

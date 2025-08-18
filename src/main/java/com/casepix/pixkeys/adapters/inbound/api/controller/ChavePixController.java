@@ -2,15 +2,12 @@ package com.casepix.pixkeys.adapters.inbound.api.controller;
 
 import com.casepix.pixkeys.adapters.inbound.api.dto.*;
 import com.casepix.pixkeys.adapters.inbound.api.mapper.ChavePixApiMapper;
-import com.casepix.pixkeys.application.dto.BuscarChavesFiltro;
 import com.casepix.pixkeys.application.port.in.AlterarChavePixUseCase;
-import com.casepix.pixkeys.application.port.in.BuscarChavePixPorIdUseCase;
-import com.casepix.pixkeys.application.port.in.BuscarChavesUseCase;
+import com.casepix.pixkeys.application.port.in.ConsultarChavePixPorIdUseCase;
+import com.casepix.pixkeys.application.port.in.ConsultarChavesUseCase;
 import com.casepix.pixkeys.application.port.in.CriarChavePixUseCase;
-import com.casepix.pixkeys.application.port.in.command.AlterarChavePixCommand;
-import com.casepix.pixkeys.domain.enums.TipoChave;
-import com.casepix.pixkeys.domain.enums.TipoConta;
-import com.casepix.pixkeys.domain.exception.ValidacaoException;
+import com.casepix.pixkeys.application.port.in.command.AlterarContaTitularCommand;
+import com.casepix.pixkeys.domain.model.ChavePix;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -23,25 +20,24 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/chave-pix")
 public class ChavePixController {
     private final CriarChavePixUseCase criarChave;
-    private final BuscarChavesUseCase buscarChaves;
-    private final BuscarChavePixPorIdUseCase buscarChavePorId;
+    private final ConsultarChavesUseCase buscarChaves;
+    private final ConsultarChavePixPorIdUseCase buscarChavePorId;
     private final AlterarChavePixUseCase alterarChave;
 
     public ChavePixController(
         CriarChavePixUseCase criarChave,
-        BuscarChavesUseCase buscarChaves,
-        BuscarChavePixPorIdUseCase buscarChavePorId,
+        ConsultarChavesUseCase buscarChaves,
+        ConsultarChavePixPorIdUseCase buscarChavePorId,
         AlterarChavePixUseCase alterarChave
     ){
         this.criarChave = criarChave;
@@ -57,7 +53,7 @@ public class ChavePixController {
     @ApiResponse(
         responseCode = "200",
         description = "Chave criada com sucesso",
-        content = @Content(schema = @Schema(implementation = CriarChavePixResponse.class))
+        content = @Content(schema = @Schema(implementation = ChavePix.class))
     )
     @ApiResponse(
         responseCode = "422",
@@ -78,9 +74,15 @@ public class ChavePixController {
         @Valid @RequestBody CriaChavePixRequest req){
 
         var cmd = ChavePixApiMapper.toCommand(req);
-        CriarChavePixResponse result = criarChave.executar(cmd);
+        var result = criarChave.executar(cmd);
 
-        return ResponseEntity.ok(result);
+        var location = ServletUriComponentsBuilder
+            .fromCurrentRequest()
+            .path("/{id}")
+            .buildAndExpand(result.idRegistro())
+            .toUri();
+
+        return ResponseEntity.ok(new CriarChavePixResponse(result.idRegistro()));
     }
 
     @Operation(
@@ -90,7 +92,7 @@ public class ChavePixController {
     @ApiResponse(
         responseCode = "200",
         description = "Chave encontrada",
-        content = @Content(schema = @Schema(implementation = ChavePixListaItemResponse.class))
+        content = @Content(schema = @Schema(implementation = ConsultarChavePixResponse.class))
     )
     @ApiResponse(
         responseCode = "404",
@@ -102,12 +104,10 @@ public class ChavePixController {
         )
     )
     @GetMapping("/{id}")
-    public ResponseEntity<ChavePixListaItemResponse> buscarPorId(@PathVariable UUID id){
-        if (id == null) {
-            throw new ValidacaoException("Quando informar ID, não envie outros filtros. Use /chave-pix/{id}.");
-        }
+    public ResponseEntity<ConsultarChavePixResponse> buscarPorId(@PathVariable UUID id){
+        var consulta = buscarChavePorId.executar(id);
 
-        return ResponseEntity.ok(buscarChavePorId.executar(id));
+        return ResponseEntity.ok(ChavePixApiMapper.toResponse(consulta));
     }
 
 
@@ -124,7 +124,7 @@ public class ChavePixController {
         responseCode = "200",
         description = "Consulta realizada com sucesso",
         content = @Content(
-            array = @ArraySchema(schema = @Schema(implementation = ChavePixListaItemResponse.class))
+            array = @ArraySchema(schema = @Schema(implementation = ConsultarChavePixResponse.class))
         )
     )
     @ApiResponse(
@@ -150,39 +150,29 @@ public class ChavePixController {
             }
         )
     )
-    @GetMapping(params = "!id")
-    public ResponseEntity<Page<ChavePixListaItemResponse>> listar(
-        @RequestParam(required = false) TipoChave tipoChave,
-        @RequestParam(required = false) TipoConta tipoConta,
-        @RequestParam(required = false) String numeroAgencia,
-        @RequestParam(required = false) String numeroConta,
-        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime inclusaoDe,
-        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime inclusaoAte,
-        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime inativacaoDe,
-        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime inativacaoAte,
+    @GetMapping
+    public ResponseEntity<Page<ConsultarChavePixResponse>> listar(
+        @Valid @ParameterObject ConsultarChavePixRequest req,
         @ParameterObject
         @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
+        var page = buscarChaves.executar(ChavePixApiMapper.toQuery(req), pageable);
 
-        var filtro = new BuscarChavesFiltro(
-            tipoChave, tipoConta, numeroAgencia, numeroConta,
-            inclusaoDe == null ? null : inclusaoDe.toInstant(),
-            inclusaoAte == null ? null : inclusaoAte.toInstant(),
-            inativacaoDe == null ? null : inativacaoDe.toInstant(),
-            inativacaoAte == null ? null : inativacaoAte.toInstant()
-        );
+        if (page.isEmpty()) {
+            return ResponseEntity.status(404).build();
+        }
 
-        var page = buscarChaves.executar(filtro, pageable);
-        return ResponseEntity.ok(page);
+        var body = page.map(ChavePixApiMapper::toResumo);
+        return ResponseEntity.ok(body);
     }
 
     @Operation(
-        summary = "Altera uma chave PIX por id (relink opcional)",
+        summary = "Altera uma chave PIX por id",
         requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
             required = true,
             content = @Content(
                 mediaType = "application/json",
-                schema = @Schema(implementation = AlterarChavePixRequest.class),
+                schema = @Schema(implementation = AlterarDadosContaRequest.class),
                 examples = @ExampleObject(
                     name = "Exemplo",
                     value = """
@@ -199,20 +189,14 @@ public class ChavePixController {
         )
     )
     @PutMapping("/{id}")
-    public ResponseEntity<AlterarChavePixResponse> alterar(
+    public ResponseEntity<AlterarDadosContaResponse> alterar(
         @PathVariable UUID id,
-        @Valid @RequestBody AlterarChavePixRequest body
+        @Valid @RequestBody AlterarDadosContaRequest req
     ){
-        var cmd = new AlterarChavePixCommand(
-            id,
-            body.tipoConta(),
-            body.numeroAgencia(),
-            body.numeroConta(),
-            body.nomeCorrentista(),
-            body.sobrenomeCorrentista()
-        );
-        var out = alterarChave.executar(cmd);
-        return ResponseEntity.ok(out);
+        var cmd = ChavePixApiMapper.toCommand(id, req);
+        var result = alterarChave.executar(cmd);
+
+        return ResponseEntity.ok(ChavePixApiMapper.toResponse(result));
     }
 
 }

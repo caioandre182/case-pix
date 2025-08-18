@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-public record AlterarChavePixRequest(
+public record AlterarDadosContaRequest(
     @NotNull
     TipoConta tipoConta,
 

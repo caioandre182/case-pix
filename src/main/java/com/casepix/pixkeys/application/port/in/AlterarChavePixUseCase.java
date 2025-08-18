@@ -1,8 +1,8 @@
 package com.casepix.pixkeys.application.port.in;
 
-import com.casepix.pixkeys.adapters.inbound.api.dto.AlterarChavePixResponse;
-import com.casepix.pixkeys.application.port.in.command.AlterarChavePixCommand;
+import com.casepix.pixkeys.application.port.in.command.AlterarContaTitularCommand;
+import com.casepix.pixkeys.application.port.result.AlterarContaTitularResult;
 
 public interface AlterarChavePixUseCase {
-    AlterarChavePixResponse executar(AlterarChavePixCommand command);
+    AlterarContaTitularResult executar(AlterarContaTitularCommand command);
 }
