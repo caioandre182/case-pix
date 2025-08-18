@@ -54,8 +54,8 @@ public class BuscarChavesService implements BuscarChavesUseCase
                     e.getConta().getTipoConta(),
                     e.getConta().getNumeroAgencia(),
                     e.getConta().getNumeroConta(),
-                    e.getConta().getTitular().getNome(),
-                    e.getConta().getTitular().getSobrenome(),
+                    e.getNomeCorrentista(),
+                    e.getSobrenomeCorrentista(),
                     e.getCreatedAt(),
                     e.getDeletedAt());
             }

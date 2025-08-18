@@ -28,8 +28,8 @@ public class BuscarChavePixPorIdService implements BuscarChavePixPorIdUseCase {
             entidade.getConta().getTipoConta(),
             entidade.getConta().getNumeroAgencia(),
             entidade.getConta().getNumeroConta(),
-            entidade.getConta().getTitular().getNome(),
-            entidade.getConta().getTitular().getSobrenome(),
+            entidade.getNomeCorrentista(),
+            entidade.getSobrenomeCorrentista(),
             entidade.getCreatedAt(),
             entidade.getDeletedAt());
     }

@@ -1,11 +1,10 @@
 package com.casepix.pixkeys.application.usecase;
 
-import com.casepix.pixkeys.adapters.inbound.api.dto.CriaChavePixRequest;
 import com.casepix.pixkeys.adapters.inbound.api.dto.CriarChavePixResponse;
 import com.casepix.pixkeys.adapters.outbound.persistence.jpa.entity.PixChaveEntity;
 import com.casepix.pixkeys.adapters.outbound.persistence.jpa.repository.ContaRepository;
 import com.casepix.pixkeys.adapters.outbound.persistence.jpa.repository.PixChaveRepository;
-import com.casepix.pixkeys.application.port.in.CriarChavePixCommand;
+import com.casepix.pixkeys.application.port.in.command.CriarChavePixCommand;
 import com.casepix.pixkeys.application.port.in.CriarChavePixUseCase;
 import com.casepix.pixkeys.domain.enums.TipoPessoa;
 import com.casepix.pixkeys.domain.exception.ChavePixJaExisteException;
@@ -29,6 +28,7 @@ public class CriarChavePixService implements CriarChavePixUseCase {
     private final int LIMITE_PJ = 20;
 
 
+    @Override
     @Transactional
     public CriarChavePixResponse executar(CriarChavePixCommand req){
         var conta = contaRepo.findByNumeroAgenciaAndNumeroContaAndTipoConta(

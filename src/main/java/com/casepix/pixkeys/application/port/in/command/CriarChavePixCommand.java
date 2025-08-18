@@ -1,4 +1,4 @@
-package com.casepix.pixkeys.application.port.in;
+package com.casepix.pixkeys.application.port.in.command;
 
 import com.casepix.pixkeys.domain.enums.TipoChave;
 import com.casepix.pixkeys.domain.enums.TipoConta;

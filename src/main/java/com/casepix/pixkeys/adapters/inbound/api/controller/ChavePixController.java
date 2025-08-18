@@ -1,13 +1,13 @@
 package com.casepix.pixkeys.adapters.inbound.api.controller;
 
-import com.casepix.pixkeys.adapters.inbound.api.dto.ChavePixListaItemResponse;
-import com.casepix.pixkeys.adapters.inbound.api.dto.CriaChavePixRequest;
-import com.casepix.pixkeys.adapters.inbound.api.dto.CriarChavePixResponse;
+import com.casepix.pixkeys.adapters.inbound.api.dto.*;
 import com.casepix.pixkeys.adapters.inbound.api.mapper.ChavePixApiMapper;
 import com.casepix.pixkeys.application.dto.BuscarChavesFiltro;
+import com.casepix.pixkeys.application.port.in.AlterarChavePixUseCase;
 import com.casepix.pixkeys.application.port.in.BuscarChavePixPorIdUseCase;
 import com.casepix.pixkeys.application.port.in.BuscarChavesUseCase;
 import com.casepix.pixkeys.application.port.in.CriarChavePixUseCase;
+import com.casepix.pixkeys.application.port.in.command.AlterarChavePixCommand;
 import com.casepix.pixkeys.domain.enums.TipoChave;
 import com.casepix.pixkeys.domain.enums.TipoConta;
 import com.casepix.pixkeys.domain.exception.ValidacaoException;
@@ -36,15 +36,18 @@ public class ChavePixController {
     private final CriarChavePixUseCase criarChave;
     private final BuscarChavesUseCase buscarChaves;
     private final BuscarChavePixPorIdUseCase buscarChavePorId;
+    private final AlterarChavePixUseCase alterarChave;
 
     public ChavePixController(
         CriarChavePixUseCase criarChave,
         BuscarChavesUseCase buscarChaves,
-        BuscarChavePixPorIdUseCase buscarChavePorId
+        BuscarChavePixPorIdUseCase buscarChavePorId,
+        AlterarChavePixUseCase alterarChave
     ){
         this.criarChave = criarChave;
         this.buscarChaves = buscarChaves;
         this.buscarChavePorId = buscarChavePorId;
+        this.alterarChave = alterarChave;
     }
 
     @Operation(
@@ -172,4 +175,44 @@ public class ChavePixController {
         var page = buscarChaves.executar(filtro, pageable);
         return ResponseEntity.ok(page);
     }
+
+    @Operation(
+        summary = "Altera uma chave PIX por id (relink opcional)",
+        requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            required = true,
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = AlterarChavePixRequest.class),
+                examples = @ExampleObject(
+                    name = "Exemplo",
+                    value = """
+                        {
+                          "tipoConta": "CORRENTE",
+                          "numeroAgencia": "0001",
+                          "numeroConta": "12345678",
+                          "nomeCorrentista": "Joao",
+                          "sobrenomeCorrentista": "Silva"
+                        }
+                        """
+                )
+            )
+        )
+    )
+    @PutMapping("/{id}")
+    public ResponseEntity<AlterarChavePixResponse> alterar(
+        @PathVariable UUID id,
+        @Valid @RequestBody AlterarChavePixRequest body
+    ){
+        var cmd = new AlterarChavePixCommand(
+            id,
+            body.tipoConta(),
+            body.numeroAgencia(),
+            body.numeroConta(),
+            body.nomeCorrentista(),
+            body.sobrenomeCorrentista()
+        );
+        var out = alterarChave.executar(cmd);
+        return ResponseEntity.ok(out);
+    }
+
 }

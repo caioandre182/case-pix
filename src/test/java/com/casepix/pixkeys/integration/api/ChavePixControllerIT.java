@@ -392,12 +392,229 @@ public class ChavePixControllerIT {
             });
     }
 
-    private record ContaSeed(String tipoConta, String agencia, String conta) {}
+    @Test
+    void put_404_quando_id_inexistente() throws Exception {
+        var c = contaDe("PF");
+        String body = bodyAlteracao(c.tipoConta(), c.agencia(), c.conta(), "Joao", "Silva");
+
+        mvc.perform(put("/chave-pix/{id}", UUID.randomUUID())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("KEY_NOT_FOUND"));
+    }
+
+    @Test
+    void put_200_altera_nome_e_sobrenome_mesma_conta() throws Exception {
+        var c = contaDe("PF");
+        UUID id = criarChave(c, "EMAIL", "put200@mail.com", "Joao", "Antigo");
+
+        String body = bodyAlteracao(c.tipoConta(), c.agencia(), c.conta(), "Novo", "Sobrenome");
+
+        mvc.perform(put("/chave-pix/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(id.toString()))
+            .andExpect(jsonPath("$.nomeCorrentista").value("Novo Sobrenome"))
+            .andExpect(jsonPath("$.numeroAgencia").value(c.agencia()))
+            .andExpect(jsonPath("$.numeroConta").value(c.conta()))
+            .andExpect(jsonPath("$.tipoConta").value(c.tipoConta()));
+
+        var row = jdbc.queryForMap("SELECT nome_correntista, sobrenome_correntista FROM pix_chave WHERE id = ?", id);
+        assertThat(row.get("nome_correntista")).isEqualTo("Novo");
+        assertThat(row.get("sobrenome_correntista")).isEqualTo("Sobrenome");
+    }
+
+    @Test
+    void put_200_relink_para_conta_existente_sem_estourar_limite() throws Exception {
+        var origem = contaDe("PF");
+        UUID id = criarChave(origem, "EMAIL", "relink@mail.com", "Joao", "Origem");
+
+        var destino = criarContaNova("PF", "CORRENTE", "7001", "55550001");
+
+        String body = bodyAlteracao(destino.tipoConta(), destino.agencia(), destino.conta(), "Joao", "Destino");
+
+        mvc.perform(put("/chave-pix/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.numeroAgencia").value(destino.agencia()))
+            .andExpect(jsonPath("$.numeroConta").value(destino.conta()))
+            .andExpect(jsonPath("$.tipoConta").value(destino.tipoConta()))
+            .andExpect(jsonPath("$.nomeCorrentista").value("Joao Destino"));
+    }
+
+    @Test
+    void put_404_quando_conta_alvo_inexistente() throws Exception {
+        var c = contaDe("PF");
+        UUID id = criarChave(c, "EMAIL", "notfound-dest@mail.com", "Joao", "Silva");
+
+        String body = bodyAlteracao("CORRENTE", "9999", "00000000", "Joao", "Silva");
+
+        mvc.perform(put("/chave-pix/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("ACCOUNT_NOT_FOUND"));
+    }
+
+    @Test
+    void put_422_quando_chave_inativa() throws Exception {
+        var c = contaDe("PF");
+        UUID id = criarChave(c, "EMAIL", "inactive@mail.com", "Joao", "Silva");
+        inativar(id);
+
+        String body = bodyAlteracao(c.tipoConta(), c.agencia(), c.conta(), "Novo", "Nome");
+
+        mvc.perform(put("/chave-pix/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void put_422_quando_agencia_nao_numerica_ou_ultrapassa_4_digitos() throws Exception {
+        var c = contaDe("PF");
+        UUID id = criarChave(c, "EMAIL", "put-val-ag@mail.com", "Joao", "Silva");
+
+        String bad1 = bodyAlteracao(c.tipoConta(), "00A1", c.conta(), "Joao", "Silva");
+        mvc.perform(put("/chave-pix/{id}", id).contentType(MediaType.APPLICATION_JSON).content(bad1))
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+
+        String bad2 = bodyAlteracao(c.tipoConta(), "12345", c.conta(), "Joao", "Silva");
+        mvc.perform(put("/chave-pix/{id}", id).contentType(MediaType.APPLICATION_JSON).content(bad2))
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void put_422_quando_conta_nao_numerica_ou_ultrapassa_8_digitos() throws Exception {
+        var c = contaDe("PF");
+        UUID id = criarChave(c, "EMAIL", "put-val-cc@mail.com", "Joao", "Silva");
+
+        String bad1 = bodyAlteracao(c.tipoConta(), c.agencia(), "12AB5678", "Joao", "Silva");
+        mvc.perform(put("/chave-pix/{id}", id).contentType(MediaType.APPLICATION_JSON).content(bad1))
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+
+        String bad2 = bodyAlteracao(c.tipoConta(), c.agencia(), "123456789", "Joao", "Silva");
+        mvc.perform(put("/chave-pix/{id}", id).contentType(MediaType.APPLICATION_JSON).content(bad2))
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void put_422_quando_nome_obrigatorio_ou_ultrapassa_30() throws Exception {
+        var c = contaDe("PF");
+        UUID id = criarChave(c, "EMAIL", "put-val-nome@mail.com", "Joao", "Silva");
+
+        String blank = bodyAlteracao(c.tipoConta(), c.agencia(), c.conta(), "", "X");
+        mvc.perform(put("/chave-pix/{id}", id).contentType(MediaType.APPLICATION_JSON).content(blank))
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+
+        String nome31 = "A".repeat(31);
+        String longName = bodyAlteracao(c.tipoConta(), c.agencia(), c.conta(), nome31, "X");
+        mvc.perform(put("/chave-pix/{id}", id).contentType(MediaType.APPLICATION_JSON).content(longName))
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void put_422_quando_sobrenome_ultrapassa_45() throws Exception {
+        var c = contaDe("PF");
+        UUID id = criarChave(c, "EMAIL", "put-val-sobre@mail.com", "Joao", "Silva");
+
+        String sobrenome46 = "B".repeat(46);
+        String bad = bodyAlteracao(c.tipoConta(), c.agencia(), c.conta(), "Joao", sobrenome46);
+
+        mvc.perform(put("/chave-pix/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(bad))
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void put_422_quando_tipoConta_invalido() throws Exception {
+        var c = contaDe("PF");
+        UUID id = criarChave(c, "EMAIL", "put-val-tc@mail.com", "Joao", "Silva");
+
+        String bad = """
+        { "tipoConta":"SALARIO", "numeroAgencia":"%s", "numeroConta":"%s",
+          "nomeCorrentista":"Joao", "sobrenomeCorrentista":"Silva" }
+        """.formatted(c.agencia(), c.conta());
+
+        mvc.perform(put("/chave-pix/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(bad))
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void put_422_limite_pf_na_conta_destino() throws Exception {
+        var destino = criarContaNova("PF", "CORRENTE", "8001", "60000001");
+
+        for (int i = 0; i < 5; i++) {
+            String p = payload("EMAIL", "pf-dest-" + i + "@limit.com", destino, "Nome", "PF");
+            mvc.perform(post("/chave-pix").contentType(MediaType.APPLICATION_JSON).content(p))
+                .andExpect(result -> assertThat(result.getResponse().getStatus()).isIn(200, 201));
+        }
+
+        assertThat(chavesAtivasNaConta(destino.id())).isEqualTo(5);
+
+        var origem = criarContaNova("PF", "CORRENTE", "8002", "60000002");
+        UUID id = criarChave(origem, "EMAIL", "pf-relink@mail.com", "Joao", "Origem");
+
+        String body = bodyAlteracao(destino.tipoConta(), destino.agencia(), destino.conta(), "Joao", "Destino");
+
+        mvc.perform(put("/chave-pix/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andDo(r -> {
+                System.out.println("PUT PF status=" + r.getResponse().getStatus());
+                System.out.println("PUT PF body=" + r.getResponse().getContentAsString());
+            })
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.code").value("LIMIT_EXCEEDED"));
+    }
+
+    @Test
+    void put_422_limite_pj_na_conta_destino() throws Exception {
+        var destino = criarContaNova("PJ", "CORRENTE", "8101", "61000001");
+
+        for (int i = 0; i < 20; i++) {
+            String p = payload("EMAIL", "pj-dest-" + i + "@limit.com", destino, "Empresa", "PJ");
+            mvc.perform(post("/chave-pix").contentType(MediaType.APPLICATION_JSON).content(p))
+                .andExpect(result -> assertThat(result.getResponse().getStatus()).isIn(200, 201));
+        }
+
+        var origem = criarContaNova("PJ", "CORRENTE", "8102", "61000002");
+        UUID id = criarChave(origem, "EMAIL", "pj-relink@mail.com", "Empresa", "Origem");
+
+        String body = bodyAlteracao(destino.tipoConta(), destino.agencia(), destino.conta(), "Empresa", "Destino");
+
+        mvc.perform(put("/chave-pix/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andDo(r -> {
+                System.out.println("PUT PJ status=" + r.getResponse().getStatus());
+                System.out.println("PUT PJ body=" + r.getResponse().getContentAsString());
+            })
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.code").value("LIMIT_EXCEEDED"));
+    }
+
+    private record ContaSeed(UUID id, String tipoConta, String agencia, String conta) {}
 
     private ContaSeed contaDe(String tipoPessoa) {
         return jdbc.query(
             """
-            SELECT c.tipo_conta, c.numero_agencia, c.numero_conta
+            SELECT c.id, c.tipo_conta, c.numero_agencia, c.numero_conta
               FROM conta_bancaria c
               JOIN titular t ON t.id = c.titular_id
              WHERE t.tipo_pessoa = ?
@@ -405,7 +622,7 @@ public class ChavePixControllerIT {
             """,
             ps -> ps.setString(1, tipoPessoa),
             rs -> rs.next() ? new ContaSeed(
-                rs.getString(1), rs.getString(2), rs.getString(3)
+                rs.getObject(1, java.util.UUID.class), rs.getString(2), rs.getString(3), rs.getString(4)
             ) : null
         );
     }
@@ -439,4 +656,45 @@ public class ChavePixControllerIT {
         id = com.jayway.jsonpath.JsonPath.read(raw, "$.idRegistro");
         return UUID.fromString(id);
     }
+
+    private String bodyAlteracao(String tipoConta, String agencia, String conta, String nome, String sobrenome) {
+        return """
+        {
+          "tipoConta":"%s",
+          "numeroAgencia":"%s",
+          "numeroConta":"%s",
+          "nomeCorrentista":"%s",
+          "sobrenomeCorrentista":"%s"
+        }
+        """.formatted(tipoConta, agencia, conta, nome, sobrenome == null ? "" : sobrenome);
+    }
+
+    private ContaSeed criarContaNova(String tipoPessoa, String tipoConta, String agencia, String conta) {
+        UUID titularId = UUID.randomUUID();
+        UUID contaId = UUID.randomUUID();
+
+        jdbc.update("""
+        INSERT INTO titular (id, tipo_pessoa, cpf, cnpj, nome, sobrenome, created_at)
+        VALUES (?, ?, NULL, NULL, ?, ?, NOW())
+    """, titularId, tipoPessoa, "Tit " + tipoPessoa, "Teste");
+
+        jdbc.update("""
+        INSERT INTO conta_bancaria (id, titular_id, tipo_conta, numero_agencia, numero_conta, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+    """, contaId, titularId, tipoConta, agencia, conta);
+
+        return new ContaSeed(contaId, tipoConta, agencia, conta);
+    }
+
+    private void inativar(UUID id) {
+        jdbc.update("UPDATE pix_chave SET deleted_at = NOW() WHERE id = ?", id);
+    }
+
+    private int chavesAtivasNaConta(UUID contaId) {
+        return jdbc.queryForObject(
+            "SELECT COUNT(*) FROM pix_chave WHERE conta_id = ? AND deleted_at IS NULL",
+            Integer.class, contaId
+        );
+    }
+
 }
