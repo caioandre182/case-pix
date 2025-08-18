@@ -20,10 +20,11 @@ public class GlobalExceptionHandler {
     public record ErrorDetail(String field, String message) {}
     public record ErrorResponse(Instant timestamp, String code, String message, List<ErrorDetail> details) {}
 
-    private static final Pattern PUT_PIX_PATH = Pattern.compile("^/chave-pix/[^/]+$");
-    private boolean isPutChavePix(HttpServletRequest req) {
-        return "PUT".equalsIgnoreCase(req.getMethod())
-            && PUT_PIX_PATH.matcher(req.getRequestURI()).matches();
+    private static final Pattern PUT_OR_POST_PATH = Pattern.compile("^/chave-pix/[^/]+$");
+
+    private boolean isChavePix(HttpServletRequest req) {
+        return ("PUT".equalsIgnoreCase(req.getMethod()) || "POST".equalsIgnoreCase(req.getMethod()))
+            && PUT_OR_POST_PATH.matcher(req.getRequestURI()).matches();
     }
 
     private ErrorResponse body(String code, String message, List<ErrorDetail> details) {
@@ -73,9 +74,9 @@ public class GlobalExceptionHandler {
             .map(err -> new ErrorDetail(err.getField(), err.getDefaultMessage()))
             .toList();
 
-        boolean putPix = isPutChavePix(req);
-        var resp = body(putPix ? "VALIDATION_ERROR" : "BAD_REQUEST", "Payload inválido", details);
-        return ResponseEntity.status(putPix ? HttpStatus.UNPROCESSABLE_ENTITY : HttpStatus.BAD_REQUEST).body(resp);
+        boolean putOrPostPix = isChavePix(req);
+        var resp = body(putOrPostPix ? "VALIDATION_ERROR" : "BAD_REQUEST", "Payload inválido", details);
+        return ResponseEntity.status(putOrPostPix ? HttpStatus.UNPROCESSABLE_ENTITY : HttpStatus.BAD_REQUEST).body(resp);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
@@ -88,9 +89,9 @@ public class GlobalExceptionHandler {
                 details.add(new ErrorDetail(field, "valor inválido: " + String.valueOf(ife.getValue())));
             }
         }
-        boolean putPix = isPutChavePix(req);
-        var resp = body(putPix ? "VALIDATION_ERROR" : "BAD_REQUEST", "Payload inválido", details);
-        return ResponseEntity.status(putPix ? HttpStatus.UNPROCESSABLE_ENTITY : HttpStatus.BAD_REQUEST).body(resp);
+        boolean putOrPostPix = isChavePix(req);
+        var resp = body(putOrPostPix ? "VALIDATION_ERROR" : "BAD_REQUEST", "Payload inválido", details);
+        return ResponseEntity.status(putOrPostPix ? HttpStatus.UNPROCESSABLE_ENTITY : HttpStatus.BAD_REQUEST).body(resp);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
@@ -100,8 +101,8 @@ public class GlobalExceptionHandler {
             .map(v -> new ErrorDetail(String.valueOf(v.getPropertyPath()), v.getMessage()))
             .toList();
 
-        boolean putPix = isPutChavePix(req);
-        var resp = body(putPix ? "VALIDATION_ERROR" : "BAD_REQUEST", "Payload inválido", details);
-        return ResponseEntity.status(putPix ? HttpStatus.UNPROCESSABLE_ENTITY : HttpStatus.BAD_REQUEST).body(resp);
+        boolean putOrPostPix = isChavePix(req);
+        var resp = body(putOrPostPix ? "VALIDATION_ERROR" : "BAD_REQUEST", "Payload inválido", details);
+        return ResponseEntity.status(putOrPostPix ? HttpStatus.UNPROCESSABLE_ENTITY : HttpStatus.BAD_REQUEST).body(resp);
     }
 }

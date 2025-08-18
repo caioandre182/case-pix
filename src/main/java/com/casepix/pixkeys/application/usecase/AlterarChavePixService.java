@@ -8,9 +8,10 @@ import com.casepix.pixkeys.application.port.out.ContaRepositoryPort;
 import com.casepix.pixkeys.application.port.out.TitularRepositoryPort;
 import com.casepix.pixkeys.application.port.result.AlterarContaTitularResult;
 import com.casepix.pixkeys.domain.exception.ChavePixNaoEncontradaException;
-import jakarta.transaction.Transactional;
+import com.casepix.pixkeys.domain.exception.ValidacaoException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 
 @Service
@@ -24,17 +25,19 @@ public class AlterarChavePixService implements AlterarChavePixUseCase {
     @Override
     @Transactional
     public AlterarContaTitularResult executar(AlterarContaTitularCommand cmd){
-        var chave = pixRepo.findById(cmd.idChave());
+        var chave = pixRepo.findById(cmd.idChave()).orElseThrow(
+            () -> new ChavePixNaoEncontradaException("Chave não encontrada")
+        );
 
-        if(chave.isEmpty()){
-            throw new ChavePixNaoEncontradaException("Chave não encontrada");
+        if(chave.deletedAt() != null){
+            throw new ValidacaoException("Chave inativada não pode ser alterada");
         }
 
-        contaRepo.atualizar(chave.get().contaId(), cmd.numeroAgencia(), cmd.numeroConta(), cmd.tipoConta());
+        contaRepo.atualizar(chave.contaId(), cmd.numeroAgencia(), cmd.numeroConta(), cmd.tipoConta());
 
-        titularRepo.atualizar(chave.get().titularId(), cmd.nomeCorrentista(), cmd.sobrenomeCorrentista());
+        titularRepo.atualizar(chave.titularId(), cmd.nomeCorrentista(), cmd.sobrenomeCorrentista());
 
-        return leituraPort.findChavePix(chave.get().chaveId())
+        return leituraPort.findChavePix(chave.chaveId())
             .orElseThrow(() -> new ChavePixNaoEncontradaException("Chave não encontrada"));
     }
 }
