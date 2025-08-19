@@ -11,4 +11,5 @@ public interface ChavePixRepositoryPort {
     long countAtivasByContaId(UUID contaId);
     ChavePix save(ChavePix pix);
     Optional<ChavePixComTitular> findById(UUID chaveId);
+    void relinkConta(UUID chaveId, UUID contaDestinoId);
 }

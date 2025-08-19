@@ -8,5 +8,8 @@ import java.util.UUID;
 
 public interface ContaRepositoryPort {
     Optional<Conta> findByAgenciaContaTipo(String agencia, String conta, TipoConta tipoConta);
+
     void atualizar(UUID contaId, String agencia, String conta, TipoConta tipoConta);
+
+    Optional<Conta> findContaById(UUID contaId);
 }

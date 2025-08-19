@@ -27,7 +27,7 @@ run:
 restart: down up
 
 test:
-	$(GRADLE) test
+	$(GRADLE) test -Dspring.profiles.active=test --no-daemon
 
 coverage:
 	$(GRADLE) --stop || true

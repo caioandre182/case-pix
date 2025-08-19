@@ -1,8 +1,7 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/pix
-    username: local_user
-    password: local_password
+    url: jdbc:tc:postgresql:16-alpine:///pix
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
   jpa:
     hibernate:
       ddl-auto: validate

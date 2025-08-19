@@ -2,6 +2,7 @@ package com.casepix.pixkeys.adapters.outbound.persistence.jpa.adapter;
 
 import com.casepix.pixkeys.adapters.outbound.persistence.jpa.repository.TitularRepository;
 import com.casepix.pixkeys.application.port.out.TitularRepositoryPort;
+import com.casepix.pixkeys.domain.enums.TipoPessoa;
 import com.casepix.pixkeys.domain.exception.ContaNaoEncontradaException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -23,5 +24,13 @@ public class TitularRepositoryAdapter implements TitularRepositoryPort {
         titularEncontrado.setSobrenome(sobrenome);
 
         repo.save(titularEncontrado);
+    }
+
+    @Override
+    public TipoPessoa verificaTipoPessoa(UUID titularId) {
+        var tipoPessoa = repo.findById(titularId)
+            .orElseThrow(() -> new ContaNaoEncontradaException("Titular da conta não encontrado(a)"));
+
+        return tipoPessoa.getTipoPessoa();
     }
 }

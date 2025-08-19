@@ -8,6 +8,7 @@ import com.casepix.pixkeys.application.port.in.ConsultarChavesUseCase;
 import com.casepix.pixkeys.application.port.in.CriarChavePixUseCase;
 import com.casepix.pixkeys.application.port.in.command.AlterarContaTitularCommand;
 import com.casepix.pixkeys.domain.model.ChavePix;
+import com.casepix.pixkeys.infra.error.GlobalExceptionHandler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -129,11 +130,14 @@ public class ChavePixController {
     )
     @ApiResponse(
         responseCode = "404",
-        description = "Nenhum registro para os filtros",
-        content = @Content(mediaType = "application/json",
-            examples = @ExampleObject(name = "Sem resultados", value = """
-        { "code":"NOT_FOUND","message":"Nenhuma chave encontrada para os filtros informados","details":[] }
-        """)
+        description = "Chave não encontrada",
+        content = @Content(
+            mediaType = "application/json",
+            schema = @Schema(implementation = GlobalExceptionHandler.ErrorResponse.class),
+            examples = @ExampleObject(
+                name = "Not found",
+                value = "{\"code\":\"KEY_NOT_FOUND\",\"message\":\"Chave não encontrada: 123e4567-e89b-12d3-a456-426614174000\",\"details\":[]}"
+            )
         )
     )
     @ApiResponse(

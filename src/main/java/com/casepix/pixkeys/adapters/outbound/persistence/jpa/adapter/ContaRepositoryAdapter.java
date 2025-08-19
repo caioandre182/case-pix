@@ -33,4 +33,12 @@ public class ContaRepositoryAdapter implements ContaRepositoryPort {
 
         repo.save(contaEncontrada);
     }
+
+    @Override
+    public Optional<Conta> findContaById(UUID contaId) {
+        return Optional.ofNullable(repo.findById(contaId).map(ContaJpaMapper::toDomain)
+            .orElseThrow(() -> new ContaNaoEncontradaException("Conta não foi encontrada")));
+    }
+
+
 }
