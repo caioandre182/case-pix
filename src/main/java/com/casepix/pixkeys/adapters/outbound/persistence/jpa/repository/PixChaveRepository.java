@@ -22,13 +22,13 @@ public interface PixChaveRepository extends JpaRepository<ChavePixEntity, UUID>,
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = """
-        update pix_chave
-           set conta_id = :contaId,
-               updated_at = now()
-         where id = :chaveId
-           and deleted_at is null
-        """, nativeQuery = true)
-    int relinkConta(@Param("chaveId") UUID chaveId, @Param("conta") ContaEntity conta);
+    update pix_chave
+       set conta_id = :contaId,
+           updated_at = now()
+     where id = :chaveId
+       and deleted_at is null
+    """, nativeQuery = true)
+    int relinkConta(@Param("chaveId") UUID chaveId, @Param("contaId") UUID contaId);
 
     boolean existsByValorChave(String valorChave);
     long countByConta_IdAndDeletedAtIsNull(UUID contaId);

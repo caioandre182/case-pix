@@ -3,6 +3,7 @@ package com.casepix.pixkeys.adapters.outbound.persistence.jpa.spec;
 import com.casepix.pixkeys.adapters.outbound.persistence.jpa.entity.ChavePixEntity;
 import com.casepix.pixkeys.domain.enums.TipoChave;
 import com.casepix.pixkeys.domain.enums.TipoConta;
+import jakarta.persistence.criteria.Join;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.Instant;
@@ -34,8 +35,14 @@ public final class PixChaveSpecs {
 
     public static Specification<ChavePixEntity> nome(String nome) {
         if (nome == null) return null;
-        return (root, query, builder) ->
-            builder.like(builder.lower(root.get("nomeCorrentista")), "%" + nome.toLowerCase() + "%");
+        return (root, query, builder) -> {
+            Join<Object, Object> conta = root.join("conta");
+            Join<Object, Object> titular = conta.join("titular");
+            return builder.like(
+                builder.lower(titular.get("nome")),
+                "%" + nome.toLowerCase() + "%"
+            );
+        };
     }
 
     public static Specification<ChavePixEntity> inclusaoEntre(Instant de, Instant ate) {

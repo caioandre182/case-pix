@@ -59,7 +59,7 @@ public class ChavePixRepositoryAdapter implements ChavePixRepositoryPort {
         var conta = contaRepo.findById(contaDestinoId)
             .orElseThrow(() -> new ValidacaoException("Conta destino inexistente"));
 
-        int updated = pixRepo.relinkConta(chaveId, conta);
+        int updated = pixRepo.relinkConta(chaveId, conta.getId());
         if (updated == 0) {
             throw new ChavePixNaoEncontradaException("Chave não encontrada ou inativa");
         }
