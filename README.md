@@ -1,13 +1,13 @@
 # Módulo de Cadastro de Chaves PIX
 
-Api desenvolvida em Java + Spring Boot para gerenciamento de chaves Pix.
+API desenvolvida em Java + Spring Boot para gerenciamento de chaves Pix.
 Permite criação, alteração e consulta, seguindo regras de negócio, de limites por tipo de pessoa (PF até 5 chaves, PJ
 até 20 chaves) e mantendo integridade entre conta e titular.
 
 ## Arquitetura
 
 Arquitetura Hexagonal foi escolhida por sua facilidade em desacoplar o domínio de serviços externos, e ainda se torna
-independente de frameworks, banco, ect.
+independente de frameworks, banco etc.
 
 ### Gerenciador de dependências
 
@@ -94,25 +94,25 @@ O projeto possui um **Makefile** que facilita a execução de tarefas comuns:
 
 #### Payload de entrada
 
+TIPOS - EMAIL, CELULAR, CNPJ, CPF, ALEATORIA
+
 ```json
 {
   "tipo": "EMAIL",
-  // celular | email | cpf | cnpj | aleatorio
   "valor": "teste@pix.com",
   "tipoConta": "CORRENTE",
-  // corrente | poupanca
   "numeroAgencia": "1234",
   "numeroConta": "12345678",
   "nomeCorrentista": "João",
   "sobrenomeCorrentista": "Silva"
 }
+```
 
 Respostas
 
-✅ 200: chave criada com sucesso (retorna id gerado em formato UUID)
+✅ 200 — chave criada com sucesso (retorna id UUID)
 
-❌ 422: erro de validação (ex: CPF inválido, chave duplicada etc.)
-```
+❌ 422 — erro de validação (ex.: CPF inválido, chave duplicada etc.)
 
 ### Alterar chave Pix
 
@@ -128,13 +128,15 @@ Respostas
   "nomeCorrentista": "Maria",
   "sobrenomeCorrentista": "Almeida"
 }
+```
 
 Respostas
 
-✅ 200: alteração realizada com sucesso (retorna os dados atualizados)
-❌ 404: chave não encontrada
-❌ 422: erro de validação (ex: conta inválida, chave inativa etc.)
-```
+✅ 200 — alteração realizada (retorna dados atualizados)
+
+❌ 404 — chave não encontrada
+
+❌ 422 — erro de validação (ex.: conta inválida, chave inativa etc.)
 
 ### Consultar chave Pix por ID
 
@@ -155,12 +157,13 @@ Respostas
   "dataHoraInclusao": "2025-08-19T10:15:30Z",
   "dataHoraInativacao": null
 }
+```
 
 Respostas
 
-✅ 200: chave encontrada
-❌ 404: chave não encontrada
-```
+✅ 200 — chave encontrada
+
+❌ 404 — chave não encontrada
 
 ### Consultar chave Pix por filtros
 
@@ -184,13 +187,16 @@ Respostas
     "dataHoraInativacao": null
   }
 ]
+```
 
 Respostas
 
-✅ 200: lista de chaves encontradas
-❌ 404: nenhum registro encontrado
-❌ 422: combinação inválida de filtros (ex: informar ID junto com outros filtros, ou usar inclusão + inativação ao mesmo tempo e agência e contas devem ser informados juntos)
-```
+✅ 200 — lista de chaves encontradas
+
+❌ 404 — nenhum registro encontrado
+
+❌ 422 — combinação inválida de filtros (ex.: informar ID junto com outros filtros; usar inclusão e inativação ao mesmo
+tempo; agência e conta devem ser informados juntos)
 
 ### TODO — Segunda leva de melhorias
 
