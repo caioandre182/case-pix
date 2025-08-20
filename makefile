@@ -19,7 +19,7 @@ up:
 	$(COMPOSE) up -d
 
 down:
-	$(COMPOSE) down
+	$(COMPOSE) down -v
 
 run:
 	$(GRADLE) bootRun --args="--spring.profiles.active=$(PROFILE)"
