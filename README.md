@@ -101,7 +101,7 @@ TIPOS - EMAIL, CELULAR, CNPJ, CPF, ALEATORIA
   "tipo": "EMAIL",
   "valor": "teste@pix.com",
   "tipoConta": "CORRENTE",
-  "numeroAgencia": "1234",
+  "numeroAgencia": "0001",
   "numeroConta": "12345678",
   "nomeCorrentista": "João",
   "sobrenomeCorrentista": "Silva"
@@ -123,10 +123,10 @@ Respostas
 ```json
 {
   "tipoConta": "POUPANCA",
-  "numeroAgencia": "4321",
+  "numeroAgencia": "0002",
   "numeroConta": "87654321",
-  "nomeCorrentista": "Maria",
-  "sobrenomeCorrentista": "Almeida"
+  "nomeCorrentista": "ACME LTDA",
+  "sobrenomeCorrentista": ""
 }
 ```
 
